@@ -27,7 +27,7 @@ export class campaniasController {
     return this.service.actualizarEstado(Number(id));
   }
 
-@Patch(':id/estado')
+@Patch(':id/estado-campania')
 actualizarEstadoCampania(@Param('id') id: number) {
   return this.service.actualizarEstadoCampania(Number(id));
 }
