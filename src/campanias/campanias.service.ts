@@ -23,8 +23,7 @@ export class campaniasService {
   }
 
   // Actualizar camapaña - calcular totales
-
-  async calcularTotales(campaignId: number) {
+ async calcularTotales(campaignId: number) {
     const campaign = await this.campaignRepo.findOne({
       where: { id: campaignId },
     });
@@ -33,33 +32,56 @@ export class campaniasService {
       throw new NotFoundException('Campaña no encontrada');
     }
 
+    
     const totalRecords = await this.messageRepo.count({
       where: { id: campaignId },
     });
 
+ 
     const totalSent = await this.messageRepo.count({
       where: { id: campaignId, shippingStatus: 2 },
     });
+ console.log('Total Sent:', totalSent);
+ console.log('Campaign ID:', campaignId);
+ const total = await this.messageRepo.count();
+ console.log('message:', total);
 
+    
     const totalError = await this.messageRepo.count({
       where: { id: campaignId, shippingStatus: 3 },
     });
 
+    const pendientes = await this.messageRepo.count({
+      where: { id: campaignId, shippingStatus: 1 },
+    });
+
+    const processStatus = pendientes > 0 ? 1 : 2;
+
+    const result = await this.messageRepo
+      .createQueryBuilder('m')
+      .select('MAX(m.shipping_hour)', 'finalHour')
+      .where('m.campaign_id = :id', { id: campaignId })
+      .getRawOne();
+
     campaign.total_records = totalRecords;
     campaign.total_sent = totalSent;
     campaign.total_error = totalError;
+    campaign.process_status = processStatus;
+    campaign.final_hour = result.finalHour;
 
     await this.campaignRepo.save(campaign);
 
     return {
-      message: 'Totales actualizados correctamente',
       campaignId,
       total_records: totalRecords,
       total_sent: totalSent,
       total_error: totalError,
+      process_status: processStatus,
+      estado: processStatus === 1 ? 'PENDIENTE' : 'FINALIZADA',
+      final_hour: result.finalHour,
     };
   }
- 
+
   // Actualizar estado de campaña
 
   async actualizarEstado(campaignId: number) {
